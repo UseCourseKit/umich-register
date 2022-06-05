@@ -49,9 +49,8 @@ class APIClient
 
     private static int JsonFieldToInt(in JsonElement elem)
     {
-        int output = 0;
-        if (elem.TryGetInt32(out output)) return output;
-        return int.Parse(elem.GetString()!);
+        return (elem.ValueKind == JsonValueKind.Number) ?
+            elem.GetInt32() : int.Parse(elem.GetString()!);
     }
 
     private async Task EnsureRefreshedTokenLoaded()

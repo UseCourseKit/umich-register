@@ -11,7 +11,6 @@ public class CourseSection
     public short SectionNumber { get; init; }
     public string SectionType { get; set; } = "";
 
-    [Key]
     public int ClassNumber { get; init; }
 
     public enum EnrollmentStatus
