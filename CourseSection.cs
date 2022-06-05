@@ -1,16 +1,17 @@
-using Amazon.DynamoDBv2.DataModel;
+using System.ComponentModel.DataAnnotations;
 
-[DynamoDBTable("EnrollmentRecords")]
-readonly struct CourseSection
+public class CourseSection
 {
 
     public DateTime Time { get; init; }
-
+    /// Example: "2410"
+    public string TermCode { get; set; } = "";
     /// Example: "EECS 281"
-    [DynamoDBRangeKey]
-    public string CourseCode { get; init; }
-    [DynamoDBHashKey]
+    public string CourseCode { get; set; } = "";
     public short SectionNumber { get; init; }
+    public string SectionType { get; set; } = "";
+
+    [Key]
     public int ClassNumber { get; init; }
 
     public enum EnrollmentStatus

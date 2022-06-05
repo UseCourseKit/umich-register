@@ -20,15 +20,19 @@ class APIClient
         return resJson.RootElement.GetProperty("getSOCSectionsResponse").GetProperty("Section")
             .EnumerateArray().Select((elem) => new CourseSection
             {
-                ClassNumber = elem.GetProperty("ClassNumber").GetInt32(),
+                ClassNumber = JsonFieldToInt(elem.GetProperty("ClassNumber")),
                 CourseCode = $"{subject} {catalogNumber}",
-                NumCapacity = elem.GetProperty("EnrollmentCapacity").GetInt32(),
-                NumEnrolled = elem.GetProperty("EnrollmentTotal").GetInt32(),
-                SectionNumber = short.Parse(elem.GetProperty("SectionNumber").GetString()!),
+                NumCapacity = JsonFieldToInt(elem.GetProperty("EnrollmentCapacity")),
+                NumEnrolled = JsonFieldToInt(elem.GetProperty("EnrollmentTotal")),
+                // "001"
+                // 100
+                SectionNumber = (short) JsonFieldToInt(elem.GetProperty("SectionNumber")),
                 Status = ParseStatus(elem.GetProperty("EnrollmentStatus").GetString()!),
                 Time = DateTime.Now,
-                WaitCapacity = elem.GetProperty("WaitCapacity").GetInt32(),
-                WaitTotal = elem.GetProperty("WaitTotal").GetInt32()
+                WaitCapacity = JsonFieldToInt(elem.GetProperty("WaitCapacity")),
+                WaitTotal = JsonFieldToInt(elem.GetProperty("WaitTotal")),
+                TermCode = term,
+                SectionType = elem.GetProperty("SectionType").GetString()!
             });
     }
 
@@ -41,6 +45,13 @@ class APIClient
             case "Open": return CourseSection.EnrollmentStatus.Open;
             default: throw new ArgumentOutOfRangeException($"Unknown enrollment status: {status}");
         }
+    }
+
+    private static int JsonFieldToInt(in JsonElement elem)
+    {
+        int output = 0;
+        if (elem.TryGetInt32(out output)) return output;
+        return int.Parse(elem.GetString()!);
     }
 
     private async Task EnsureRefreshedTokenLoaded()
