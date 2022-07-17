@@ -17,6 +17,9 @@ class APIClient
         await EnsureRefreshedTokenLoaded();
         var res = await client.GetStreamAsync($"https://apigw.it.umich.edu/um/Curriculum/SOC/Terms/{term}/Schools/UM/Subjects/{subject}/CatalogNbrs/{catalogNumber}/Sections?IncludeAllSections=Y");
         var resJson = await JsonDocument.ParseAsync(res);
+        // Uniform timing so that aggregated queries can group by time
+        // Each group with the same time should be guaranteed to contain all the sections for a given class at that time
+        var now = DateTime.Now;
         return resJson.RootElement.GetProperty("getSOCSectionsResponse").GetProperty("Section")
             .EnumerateArray().Select((elem) => new CourseSection
             {
@@ -28,7 +31,7 @@ class APIClient
                 // 100
                 SectionNumber = (short) JsonFieldToInt(elem.GetProperty("SectionNumber")),
                 Status = ParseStatus(elem.GetProperty("EnrollmentStatus").GetString()!),
-                Time = DateTime.Now,
+                Time = now,
                 WaitCapacity = JsonFieldToInt(elem.GetProperty("WaitCapacity")),
                 WaitTotal = JsonFieldToInt(elem.GetProperty("WaitTotal")),
                 TermCode = term,
