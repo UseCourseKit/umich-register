@@ -20,23 +20,26 @@ class APIClient
         // Uniform timing so that aggregated queries can group by time
         // Each group with the same time should be guaranteed to contain all the sections for a given class at that time
         var now = DateTime.Now;
-        return resJson.RootElement.GetProperty("getSOCSectionsResponse").GetProperty("Section")
-            .EnumerateArray().Select((elem) => new CourseSection
-            {
-                ClassNumber = JsonFieldToInt(elem.GetProperty("ClassNumber")),
-                CourseCode = $"{subject} {catalogNumber}",
-                NumCapacity = JsonFieldToInt(elem.GetProperty("EnrollmentCapacity")),
-                NumEnrolled = JsonFieldToInt(elem.GetProperty("EnrollmentTotal")),
-                // "001"
-                // 100
-                SectionNumber = (short) JsonFieldToInt(elem.GetProperty("SectionNumber")),
-                Status = ParseStatus(elem.GetProperty("EnrollmentStatus").GetString()!),
-                Time = now,
-                WaitCapacity = JsonFieldToInt(elem.GetProperty("WaitCapacity")),
-                WaitTotal = JsonFieldToInt(elem.GetProperty("WaitTotal")),
-                TermCode = term,
-                SectionType = elem.GetProperty("SectionType").GetString()!
-            });
+        Func<JsonElement, CourseSection> elemToSection = (elem) => new CourseSection
+        {
+            ClassNumber = JsonFieldToInt(elem.GetProperty("ClassNumber")),
+            CourseCode = $"{subject} {catalogNumber}",
+            NumCapacity = JsonFieldToInt(elem.GetProperty("EnrollmentCapacity")),
+            NumEnrolled = JsonFieldToInt(elem.GetProperty("EnrollmentTotal")),
+            // "001"
+            // 100
+            SectionNumber = (short) JsonFieldToInt(elem.GetProperty("SectionNumber")),
+            Status = ParseStatus(elem.GetProperty("EnrollmentStatus").GetString()!),
+            Time = now,
+            WaitCapacity = JsonFieldToInt(elem.GetProperty("WaitCapacity")),
+            WaitTotal = JsonFieldToInt(elem.GetProperty("WaitTotal")),
+            TermCode = term,
+            SectionType = elem.GetProperty("SectionType").GetString()!
+        };
+        var sections = resJson.RootElement.GetProperty("getSOCSectionsResponse").GetProperty("Section");
+        return sections.ValueKind == JsonValueKind.Array ?
+            sections.EnumerateArray().Select(elemToSection) :
+            new CourseSection[] { elemToSection(sections) };
     }
 
     private CourseSection.EnrollmentStatus ParseStatus(string status)
@@ -62,6 +65,8 @@ class APIClient
         {
             await RefreshToken();
         }
+        if (client.DefaultRequestHeaders.Authorization != null)
+            client.DefaultRequestHeaders.Remove("Authorization");
         client.DefaultRequestHeaders.Authorization = new("Bearer", AccessToken!);
     }
 

@@ -14,6 +14,11 @@ public class EnrollmentHistoryContext : DbContext
     {
         builder.Entity<CourseSection>()
             .HasKey(c => new { c.ClassNumber, c.Time });
+        builder.Entity<CourseSection>()
+            .Property(c => c.CourseCode)
+            .HasColumnType("varchar(20)");
+        builder.Entity<CourseSection>()
+            .HasIndex(c => c.CourseCode);
     }
 }
 
