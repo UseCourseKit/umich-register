@@ -3,6 +3,7 @@ using System.Text.Json;
 class APIClient
 {
     private readonly HttpClient client = new HttpClient();
+    private readonly object headerLock = new();
     private string? AccessToken;
     private DateTime AccessTokenExpirationTime;
 
@@ -36,10 +37,19 @@ class APIClient
             TermCode = term,
             SectionType = elem.GetProperty("SectionType").GetString()!
         };
-        var sections = resJson.RootElement.GetProperty("getSOCSectionsResponse").GetProperty("Section");
-        return sections.ValueKind == JsonValueKind.Array ?
-            sections.EnumerateArray().Select(elemToSection) :
-            new CourseSection[] { elemToSection(sections) };
+        var response = resJson.RootElement.GetProperty("getSOCSectionsResponse");
+        try
+        {
+            var sections = response.GetProperty("Section");
+            return sections.ValueKind == JsonValueKind.Array ?
+                sections.EnumerateArray().Select(elemToSection) :
+                new CourseSection[] { elemToSection(sections) };
+        }
+        catch (KeyNotFoundException)
+        {
+            Console.Error.WriteLine($"Warning: {subject} {catalogNumber} may not exist. Ignoring it.");
+            return new CourseSection[] {};
+        }
     }
 
     private CourseSection.EnrollmentStatus ParseStatus(string status)
@@ -59,15 +69,18 @@ class APIClient
             elem.GetInt32() : int.Parse(elem.GetString()!);
     }
 
-    private async Task EnsureRefreshedTokenLoaded()
+    public async Task EnsureRefreshedTokenLoaded()
     {
         if (AccessToken == null || DateTime.Now > AccessTokenExpirationTime)
         {
             await RefreshToken();
         }
-        if (client.DefaultRequestHeaders.Authorization != null)
-            client.DefaultRequestHeaders.Remove("Authorization");
-        client.DefaultRequestHeaders.Authorization = new("Bearer", AccessToken!);
+        lock (headerLock)
+        {
+            if (client.DefaultRequestHeaders.Authorization != null)
+                client.DefaultRequestHeaders.Remove("Authorization");
+            client.DefaultRequestHeaders.Authorization = new("Bearer", AccessToken!);
+        }
     }
 
     private async Task RefreshToken()
