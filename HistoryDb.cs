@@ -13,6 +13,8 @@ public class EnrollmentHistoryContext : DbContext
     protected override void OnModelCreating(ModelBuilder builder)
     {
         builder.Entity<CourseSection>()
+            .ToTable("SnapshotsCompressed");
+        builder.Entity<CourseSection>()
             .HasKey(c => new { c.ClassNumber, c.Time });
         builder.Entity<CourseSection>()
             .Property(c => c.CourseCode)

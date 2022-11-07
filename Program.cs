@@ -508,7 +508,7 @@ async Task AsyncHandler()
     {
         try
         {
-            var seq = await client.ReadSections("2410", code.Catalog, code.CatalogNbr);
+            var seq = await client.ReadSections("2420", code.Catalog, code.CatalogNbr);
             await db.SaveCourses(seq);
             Console.WriteLine($"saved {seq.Count()} sections for {code.Catalog} {code.CatalogNbr}");
         }

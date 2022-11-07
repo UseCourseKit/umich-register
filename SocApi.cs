@@ -35,7 +35,8 @@ class APIClient
             WaitCapacity = JsonFieldToInt(elem.GetProperty("WaitCapacity")),
             WaitTotal = JsonFieldToInt(elem.GetProperty("WaitTotal")),
             TermCode = term,
-            SectionType = elem.GetProperty("SectionType").GetString()!
+            SectionType = elem.GetProperty("SectionType").GetString()!,
+            SnapshotId = (int)Math.Round((DateTime.Now - new DateTime(2000, 1, 1)).TotalSeconds)
         };
         var response = resJson.RootElement.GetProperty("getSOCSectionsResponse");
         try

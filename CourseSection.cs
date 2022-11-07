@@ -2,7 +2,6 @@ using System.ComponentModel.DataAnnotations;
 
 public class CourseSection
 {
-
     public DateTime Time { get; init; }
     /// Example: "2410"
     public string TermCode { get; set; } = "";
@@ -22,4 +21,5 @@ public class CourseSection
     public int NumCapacity { get; init; }
     public int WaitTotal { get; init; }
     public int WaitCapacity { get; init; }
+    public int SnapshotId { get; init; }
 }
