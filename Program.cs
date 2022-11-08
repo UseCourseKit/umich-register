@@ -114,6 +114,7 @@ CourseCode[] codes = {
     new("BIOLOGY", 172),
     new("BIOLOGY", 173),
     new("BIOLOGY", 192),
+    new("BIOLOGY", 205),
     new("BIOPHYS", 117),
     new("BIOPHYS", 150),
     new("BIOPHYS", 151),
