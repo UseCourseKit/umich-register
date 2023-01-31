@@ -10,13 +10,12 @@ class APIClient
     public APIClient()
     {
         client.DefaultRequestHeaders.Accept.Add(new("application/json"));
-        client.DefaultRequestHeaders.Add("X-IBM-Client-Id", Secrets.ClientId);
     }
 
     public async Task<IEnumerable<CourseSection>> ReadSections(string term, string subject, short catalogNumber)
     {
         await EnsureRefreshedTokenLoaded();
-        var res = await client.GetStreamAsync($"https://apigw.it.umich.edu/um/Curriculum/SOC/Terms/{term}/Schools/UM/Subjects/{subject}/CatalogNbrs/{catalogNumber}/Sections?IncludeAllSections=Y");
+        var res = await client.GetStreamAsync($"https://gw.api.it.umich.edu/um/Curriculum/SOC/Terms/{term}/Schools/UM/Subjects/{subject}/CatalogNbrs/{catalogNumber}/Sections?IncludeAllSections=Y");
         var resJson = await JsonDocument.ParseAsync(res);
         // Uniform timing so that aggregated queries can group by time
         // Each group with the same time should be guaranteed to contain all the sections for a given class at that time
@@ -86,7 +85,7 @@ class APIClient
 
     private async Task RefreshToken()
     {
-        var res = await client.PostAsync("https://apigw.it.umich.edu/um/aa/oauth2/token", new FormUrlEncodedContent(new Dictionary<string, string>{
+        var res = await client.PostAsync("https://gw.api.it.umich.edu/um/oauth2/token", new FormUrlEncodedContent(new Dictionary<string, string>{
             {"grant_type", "client_credentials"},
             {"client_id", Secrets.ClientId},
             {"client_secret", Secrets.ClientSecret},
@@ -95,7 +94,6 @@ class APIClient
         res.EnsureSuccessStatusCode();
         var doc = JsonDocument.Parse(res.Content.ReadAsStream());
         AccessToken = doc.RootElement.GetProperty("access_token").GetString();
-        AccessTokenExpirationTime = new DateTime(1970, 1, 1)
-            .AddSeconds(doc.RootElement.GetProperty("consented_on").GetInt32() + doc.RootElement.GetProperty("expires_in").GetInt32());
+        AccessTokenExpirationTime = DateTime.Now.AddSeconds(doc.RootElement.GetProperty("expires_in").GetInt32());
     }
 }
