@@ -6,6 +6,8 @@ class APIClient
     private readonly object headerLock = new();
     private string? AccessToken;
     private DateTime AccessTokenExpirationTime;
+    // When rate restricted, when do we resume requests?
+    private DateTime? NextRequestTime = null;
 
     public APIClient()
     {
@@ -14,41 +16,65 @@ class APIClient
 
     public async Task<IEnumerable<CourseSection>> ReadSections(string term, string subject, short catalogNumber)
     {
-        await EnsureRefreshedTokenLoaded();
-        var res = await client.GetStreamAsync($"https://gw.api.it.umich.edu/um/Curriculum/SOC/Terms/{term}/Schools/UM/Subjects/{subject}/CatalogNbrs/{catalogNumber}/Sections?IncludeAllSections=Y");
-        var resJson = await JsonDocument.ParseAsync(res);
-        // Uniform timing so that aggregated queries can group by time
-        // Each group with the same time should be guaranteed to contain all the sections for a given class at that time
-        var now = DateTime.Now;
-        Func<JsonElement, CourseSection> elemToSection = (elem) => new CourseSection
+        while (true)
         {
-            ClassNumber = JsonFieldToInt(elem.GetProperty("ClassNumber")),
-            CourseCode = $"{subject} {catalogNumber}",
-            NumCapacity = JsonFieldToInt(elem.GetProperty("EnrollmentCapacity")),
-            NumEnrolled = JsonFieldToInt(elem.GetProperty("EnrollmentTotal")),
-            // "001"
-            // 100
-            SectionNumber = (short) JsonFieldToInt(elem.GetProperty("SectionNumber")),
-            Status = ParseStatus(elem.GetProperty("EnrollmentStatus").GetString()!),
-            Time = now,
-            WaitCapacity = JsonFieldToInt(elem.GetProperty("WaitCapacity")),
-            WaitTotal = JsonFieldToInt(elem.GetProperty("WaitTotal")),
-            TermCode = term,
-            SectionType = elem.GetProperty("SectionType").GetString()!,
-            SnapshotId = (int)Math.Round((DateTime.Now - new DateTime(2000, 1, 1)).TotalSeconds)
-        };
-        var response = resJson.RootElement.GetProperty("getSOCSectionsResponse");
-        try
-        {
-            var sections = response.GetProperty("Section");
-            return sections.ValueKind == JsonValueKind.Array ?
-                sections.EnumerateArray().Select(elemToSection) :
-                new CourseSection[] { elemToSection(sections) };
-        }
-        catch (KeyNotFoundException)
-        {
-            Console.Error.WriteLine($"Warning: {subject} {catalogNumber} may not exist. Ignoring it.");
-            return new CourseSection[] {};
+            if (NextRequestTime != null && NextRequestTime > DateTime.Now)
+            {
+                await Task.Delay((int) Math.Ceiling(NextRequestTime.Value.Subtract(DateTime.Now).TotalMilliseconds));
+            }
+            try
+            {
+                // await EnsureRefreshedTokenLoaded();
+                var res = await client.GetStreamAsync($"https://gw.api.it.umich.edu/um/Curriculum/SOC/Terms/{term}/Schools/UM/Subjects/{subject}/CatalogNbrs/{catalogNumber}/Sections?IncludeAllSections=Y");
+                var resJson = await JsonDocument.ParseAsync(res);
+                // Uniform timing so that aggregated queries can group by time
+                // Each group with the same time should be guaranteed to contain all the sections for a given class at that time
+                var now = DateTime.Now;
+                Func<JsonElement, CourseSection> elemToSection = (elem) => new CourseSection
+                {
+                    ClassNumber = JsonFieldToInt(elem.GetProperty("ClassNumber")),
+                    CourseCode = $"{subject} {catalogNumber}",
+                    NumCapacity = JsonFieldToInt(elem.GetProperty("EnrollmentCapacity")),
+                    NumEnrolled = JsonFieldToInt(elem.GetProperty("EnrollmentTotal")),
+                    // "001"
+                    // 100
+                    SectionNumber = (short) JsonFieldToInt(elem.GetProperty("SectionNumber")),
+                    Status = ParseStatus(elem.GetProperty("EnrollmentStatus").GetString()!),
+                    Time = now,
+                    WaitCapacity = JsonFieldToInt(elem.GetProperty("WaitCapacity")),
+                    WaitTotal = JsonFieldToInt(elem.GetProperty("WaitTotal")),
+                    TermCode = term,
+                    SectionType = elem.GetProperty("SectionType").GetString()!,
+                    SnapshotId = (int)Math.Round((DateTime.Now - new DateTime(2000, 1, 1)).TotalSeconds)
+                };
+                var response = resJson.RootElement.GetProperty("getSOCSectionsResponse");
+                try
+                {
+                    var sections = response.GetProperty("Section");
+                    return sections.ValueKind == JsonValueKind.Array ?
+                        sections.EnumerateArray().Select(elemToSection) :
+                        new CourseSection[] { elemToSection(sections) };
+                }
+                catch (KeyNotFoundException)
+                {
+                    Console.Error.WriteLine($"Warning: {subject} {catalogNumber} may not exist. Ignoring it.");
+                    return new CourseSection[] {};
+                }
+            }
+            catch (System.Net.Http.HttpRequestException we)
+            {
+                if (we.StatusCode == System.Net.HttpStatusCode.TooManyRequests)
+                {
+                    Console.WriteLine("Received 429 (Calm Down). Backing off for 10 seconds.");
+                    NextRequestTime = DateTime.Now.AddSeconds(10);
+                    await Task.Delay(10000);
+                    // Outer loop causes restart
+                }
+                else
+                {
+                    throw we;
+                }
+            }
         }
     }
 
