@@ -8,6 +8,7 @@ class APIClient
     private DateTime AccessTokenExpirationTime;
     // When rate restricted, when do we resume requests?
     private DateTime? NextRequestTime = null;
+    private DateTime SnapshotTime = DateTime.Now;
 
     public APIClient()
     {
@@ -32,20 +33,21 @@ class APIClient
                 var now = DateTime.Now;
                 Func<JsonElement, CourseSection> elemToSection = (elem) => new CourseSection
                 {
-                    ClassNumber = JsonFieldToInt(elem.GetProperty("ClassNumber")),
+                    ClassNumber = (uint) JsonFieldToInt(elem.GetProperty("ClassNumber")),
                     CourseCode = $"{subject} {catalogNumber}",
-                    NumCapacity = JsonFieldToInt(elem.GetProperty("EnrollmentCapacity")),
-                    NumEnrolled = JsonFieldToInt(elem.GetProperty("EnrollmentTotal")),
+                    NumCapacity = (ushort) JsonFieldToInt(elem.GetProperty("EnrollmentCapacity")),
+                    NumOpen = (ushort) JsonFieldToInt(elem.GetProperty("AvailableSeats")),
+                    NumEnrolled = (ushort) JsonFieldToInt(elem.GetProperty("EnrollmentTotal")),
                     // "001"
                     // 100
-                    SectionNumber = (short) JsonFieldToInt(elem.GetProperty("SectionNumber")),
+                    SectionNumber = (ushort) JsonFieldToInt(elem.GetProperty("SectionNumber")),
                     Status = ParseStatus(elem.GetProperty("EnrollmentStatus").GetString()!),
                     Time = now,
-                    WaitCapacity = JsonFieldToInt(elem.GetProperty("WaitCapacity")),
-                    WaitTotal = JsonFieldToInt(elem.GetProperty("WaitTotal")),
+                    WaitCapacity = (ushort) JsonFieldToInt(elem.GetProperty("WaitCapacity")),
+                    WaitTotal = (ushort) JsonFieldToInt(elem.GetProperty("WaitTotal")),
                     TermCode = term,
                     SectionType = elem.GetProperty("SectionType").GetString()!,
-                    SnapshotId = (int)Math.Round((DateTime.Now - new DateTime(2000, 1, 1)).TotalSeconds)
+                    SnapshotId = (int)Math.Round((SnapshotTime - new DateTime(2000, 1, 1)).TotalSeconds)
                 };
                 var response = resJson.RootElement.GetProperty("getSOCSectionsResponse");
                 try

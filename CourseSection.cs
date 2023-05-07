@@ -1,5 +1,3 @@
-using System.ComponentModel.DataAnnotations;
-
 public class CourseSection
 {
     public DateTime Time { get; init; }
@@ -7,19 +5,20 @@ public class CourseSection
     public string TermCode { get; set; } = "";
     /// Example: "EECS 281"
     public string CourseCode { get; set; } = "";
-    public short SectionNumber { get; init; }
+    public ushort SectionNumber { get; init; }
     public string SectionType { get; set; } = "";
 
-    public int ClassNumber { get; init; }
+    public uint ClassNumber { get; init; }
 
     public enum EnrollmentStatus
     {
         Open, Waitlist, Closed
     }
     public EnrollmentStatus Status { get; init; }
-    public int NumEnrolled { get; init; }
-    public int NumCapacity { get; init; }
-    public int WaitTotal { get; init; }
-    public int WaitCapacity { get; init; }
+    public ushort NumEnrolled { get; init; }
+    public ushort? NumOpen { get; init; }
+    public ushort NumCapacity { get; init; }
+    public ushort WaitTotal { get; init; }
+    public ushort WaitCapacity { get; init; }
     public int SnapshotId { get; init; }
 }

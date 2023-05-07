@@ -5,11 +5,11 @@
     "dotnet lambda help",
     "All the command line options for the Lambda command can be specified in this file."
   ],
-  "profile": "mango",
+  "profile": "default",
   "region": "us-east-2",
   "configuration": "Release",
   "function-runtime": "dotnet6",
   "function-memory-size": 256,
-  "function-timeout": 30,
+  "function-timeout": 600,
   "function-handler": "EnrollmentAggregator"
 }

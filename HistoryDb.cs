@@ -7,6 +7,7 @@ public class EnrollmentHistoryContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder builder)
     {
+        // TODO switch to SecretsManager
         builder.UseMySQL(Environment.GetEnvironmentVariable("RDS_ACCESS_CREDENTIALS")!);
     }
 
